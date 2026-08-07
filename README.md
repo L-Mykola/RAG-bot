@@ -94,3 +94,7 @@ tests/              # unit tests
 | `GET` | `/api/health` | service health check |
 | `POST` | `/api/chat` | `{"question": "..."}` → `{"answer": "...", "sources": [...]}` |
 | `POST` | `/api/upload` | upload a new document (multipart/form-data, `file` field) |
+
+## Demo
+
+https://rag-bot-upks.onrender.com/
