@@ -54,6 +54,65 @@ def test_chat_endpoint_requires_question_field(client):
     assert response.status_code == 422  # FastAPI/pydantic validation error
 
 
-@pytest.mark.skip(reason="/api/upload is not implemented yet (stub returns None)")
-def test_upload_endpoint(client):
-    ...
+# --- /api/upload ---
+
+def test_upload_endpoint_rejects_unsupported_extension(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("notes.docx", b"irrelevant content", "application/octet-stream")},
+    )
+
+    assert response.status_code == 400
+    assert "Unsupported file type" in response.json()["detail"]
+    assert list(tmp_path.iterdir()) == []  # rejected before anything was written to disk
+
+
+def test_upload_endpoint_saves_file_and_ingests(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
+    monkeypatch.setattr(main, "ingest_file", lambda path: 3)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("notes.txt", b"Some documentation content.", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"filename": "notes.txt", "chunks_added": 3}
+    assert (tmp_path / "notes.txt").read_bytes() == b"Some documentation content."
+
+
+def test_upload_endpoint_passes_saved_path_to_ingest_file(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
+    received = {}
+
+    def fake_ingest_file(path):
+        received["path"] = path
+        return 1
+
+    monkeypatch.setattr(main, "ingest_file", fake_ingest_file)
+
+    client.post("/api/upload", files={"file": ("notes.md", b"# Title\nBody.", "text/markdown")})
+
+    assert received["path"] == str(tmp_path / "notes.md")
+
+
+def test_upload_endpoint_sanitizes_path_traversal_filename(client, tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
+    monkeypatch.setattr(main, "ingest_file", lambda path: 1)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("../../etc/passwd.txt", b"malicious", "text/plain")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["filename"] == "passwd.txt"
+    # only the sanitized basename landed inside tmp_path — no traversal, no subdirectories
+    assert [p.name for p in tmp_path.iterdir()] == ["passwd.txt"]
+
+
+def test_upload_endpoint_requires_file(client):
+    response = client.post("/api/upload")
+    assert response.status_code == 422
