@@ -12,21 +12,18 @@ def test_ingest_file_chunks_and_upserts_with_content_hash_ids(tmp_path, monkeypa
     ))
 
     txt_file = tmp_path / "notes.txt"
-    txt_file.write_text("A" * 1200)  # long enough to be split into multiple 500-char chunks
+    txt_file.write_text("A" * 1200)
 
     count = ingestion.ingest_file(str(txt_file))
 
     assert count == len(added["documents"]) == len(added["ids"])
-    assert count > 1  # confirms chunking actually happened, not just one blob
+    assert count > 1
 
-    # ids must be deterministic content hashes, not random
     expected_ids = [hashlib.md5(d.page_content.encode()).hexdigest() for d in added["documents"]]
     assert added["ids"] == expected_ids
 
 
 def test_ingest_file_is_idempotent_for_unchanged_content(tmp_path, monkeypatch):
-    monkeypatch.setattr(ingestion.vector_store, "add_documents", lambda documents, ids: None)
-
     txt_file = tmp_path / "notes.txt"
     txt_file.write_text("Same content every time.")
 
@@ -40,7 +37,7 @@ def test_ingest_file_is_idempotent_for_unchanged_content(tmp_path, monkeypatch):
     ingestion.ingest_file(str(txt_file))
     ingestion.ingest_file(str(txt_file))
 
-    assert first_ids == second_ids  # re-ingesting the same file produces the same ids
+    assert first_ids == second_ids
 
 
 def test_ingest_file_rejects_unsupported_extension(tmp_path):

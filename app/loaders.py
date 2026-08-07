@@ -10,12 +10,11 @@ MD_HEADING_RE = re.compile(r'^(#{1,6})\s+(.+)$')
 
 
 def _split_pdf_by_sections(reader: PdfReader, source: str) -> list[Document]:
-    """Split a PDF into Documents by heading, keeping section/subsection/page."""
     segments = []
     current_section = "Preamble"
-    current_subsection = ""  # metadata can't hold None, so use ""
+    current_subsection = ""
     buffer: list[str] = []
-    segment_start_page = 1  # 1-indexed for display to the user
+    segment_start_page = 1
 
     def flush():
         content = "\n".join(buffer).strip()
@@ -71,7 +70,6 @@ def load_pdf(path: str) -> list[Document]:
 
 
 def load_markdown(path: str) -> list[Document]:
-    """Split a Markdown file by heading level (#, ##, ###...)."""
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -89,7 +87,7 @@ def load_markdown(path: str) -> list[Document]:
                     "source": path,
                     "section": current_section,
                     "subsection": current_subsection,
-                    "page": 1,  # Markdown has no pages
+                    "page": 1,
                 },
             ))
         buffer.clear()
@@ -111,8 +109,6 @@ def load_markdown(path: str) -> list[Document]:
 
 
 def load_txt(path: str) -> list[Document]:
-    """Plain text has no structure — load as a single Document and let the
-    text splitter handle chunking purely by size."""
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
     return [Document(

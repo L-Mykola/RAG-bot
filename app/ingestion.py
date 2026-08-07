@@ -1,4 +1,3 @@
-# import basics
 import os
 import re
 import time
@@ -41,7 +40,6 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.environ
 
 vector_store = PineconeVectorStore(index=index, embedding=embeddings)
 
-# app/ingestion.py lives in app/, but documents/ stays at the project root
 DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "documents"
 
 text_splitter = RecursiveCharacterTextSplitter(
@@ -62,7 +60,8 @@ def ingest_file(path: str) -> int:
     return len(documents)
 
 
-if __name__ == "__main__":
+def ingest_all() -> None:
+    DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
     for filename in os.listdir(DOCUMENTS_DIR):
         ext = os.path.splitext(filename)[1].lower()
         if ext not in LOADERS:
@@ -70,3 +69,7 @@ if __name__ == "__main__":
         path = os.path.join(DOCUMENTS_DIR, filename)
         count = ingest_file(path)
         print(f"Ingested {filename}: {count} chunk(s)")
+
+
+if __name__ == "__main__":
+    ingest_all()

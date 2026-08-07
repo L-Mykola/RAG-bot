@@ -13,13 +13,9 @@ class FakePage:
 
 
 class FakeReader:
-    """Minimal stand-in for pypdf.PdfReader — only .pages is used by loaders.py."""
-
     def __init__(self, pages_text: list[str]):
         self.pages = [FakePage(t) for t in pages_text]
 
-
-# --- heading regexes ---
 
 def test_top_heading_regex_matches_standard_case():
     assert TOP_HEADING_RE.match("1. GENERAL")
@@ -27,7 +23,6 @@ def test_top_heading_regex_matches_standard_case():
 
 
 def test_top_heading_regex_matches_missing_space_after_period():
-    # real artifact found in the NiftyBridge PDF text extraction
     assert TOP_HEADING_RE.match("9.THIRD-PARTY SERVICES")
 
 
@@ -41,8 +36,6 @@ def test_sub_heading_regex_matches_and_rejects():
     assert not SUB_HEADING_RE.match("1. GENERAL")
     assert not SUB_HEADING_RE.match("just a lowercase sentence.")
 
-
-# --- PDF section splitting ---
 
 def test_split_pdf_by_sections_assigns_section_subsection_page():
     text = (
@@ -66,8 +59,6 @@ def test_split_pdf_by_sections_tracks_page_across_pages():
     reader = FakeReader(["1. GENERAL\nText on page one.", "More text, still section 1, page two."])
     docs = loaders._split_pdf_by_sections(reader, source="test.pdf")
 
-    # no new heading appears on page two, so the section stays open and
-    # both pages merge into one segment, tagged with the page it started on
     assert len(docs) == 1
     assert docs[0].metadata["page"] == 1
     assert "page one" in docs[0].page_content
@@ -101,8 +92,6 @@ def test_load_pdf_keeps_section_split_when_headings_found(monkeypatch):
 
     assert [d.metadata["section"] for d in docs] == ["1. GENERAL", "2. SERVICES"]
 
-
-# --- markdown splitting ---
 
 def test_load_markdown_splits_by_heading_level(tmp_path):
     md_file = tmp_path / "doc.md"
@@ -139,8 +128,6 @@ def test_load_markdown_has_no_page_concept(tmp_path):
     assert docs[0].metadata["page"] == 1
 
 
-# --- plain text loading ---
-
 def test_load_txt_returns_single_unstructured_document(tmp_path):
     txt_file = tmp_path / "notes.txt"
     txt_file.write_text("Just some unstructured text.\nSecond line.")
@@ -151,8 +138,6 @@ def test_load_txt_returns_single_unstructured_document(tmp_path):
     assert docs[0].page_content == "Just some unstructured text.\nSecond line."
     assert docs[0].metadata == {"source": str(txt_file), "section": "", "subsection": "", "page": 1}
 
-
-# --- dispatcher ---
 
 def test_load_document_dispatches_by_extension(monkeypatch):
     called_with = {}

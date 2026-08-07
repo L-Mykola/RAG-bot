@@ -7,7 +7,8 @@ from schemas import ChatResponse
 
 @pytest.fixture
 def client():
-    return TestClient(main.app)
+    with TestClient(main.app) as c:
+        yield c
 
 
 def test_health_check(client):
@@ -51,10 +52,8 @@ def test_chat_endpoint_forwards_the_question(client, monkeypatch):
 
 def test_chat_endpoint_requires_question_field(client):
     response = client.post("/api/chat", json={})
-    assert response.status_code == 422  # FastAPI/pydantic validation error
+    assert response.status_code == 422
 
-
-# --- /api/upload ---
 
 def test_upload_endpoint_rejects_unsupported_extension(client, tmp_path, monkeypatch):
     monkeypatch.setattr(main, "DOCUMENTS_DIR", tmp_path)
@@ -66,7 +65,7 @@ def test_upload_endpoint_rejects_unsupported_extension(client, tmp_path, monkeyp
 
     assert response.status_code == 400
     assert "Unsupported file type" in response.json()["detail"]
-    assert list(tmp_path.iterdir()) == []  # rejected before anything was written to disk
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_upload_endpoint_saves_file_and_ingests(client, tmp_path, monkeypatch):
@@ -109,7 +108,6 @@ def test_upload_endpoint_sanitizes_path_traversal_filename(client, tmp_path, mon
 
     assert response.status_code == 200
     assert response.json()["filename"] == "passwd.txt"
-    # only the sanitized basename landed inside tmp_path — no traversal, no subdirectories
     assert [p.name for p in tmp_path.iterdir()] == ["passwd.txt"]
 
 

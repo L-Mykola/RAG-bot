@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, File, HTTPException
@@ -5,13 +6,20 @@ from fastapi.templating import Jinja2Templates
 
 from rag_bot import answer_question
 from schemas import ChatRequest, ChatResponse
-from ingestion import ingest_file, DOCUMENTS_DIR
+from ingestion import ingest_file, ingest_all, DOCUMENTS_DIR
 from loaders import LOADERS
 
 
 BASE_DIR = Path(__file__).resolve().parent
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ingest_all()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
@@ -33,7 +41,7 @@ def chat(question: ChatRequest) -> ChatResponse:
 
 @app.post('/api/upload')
 async def upload_file(file: UploadFile = File(...)):
-    safe_name = Path(file.filename).name  # strip any path components (path traversal guard)
+    safe_name = Path(file.filename).name
     ext = Path(safe_name).suffix.lower()
     if ext not in LOADERS:
         supported = ", ".join(sorted(LOADERS))
