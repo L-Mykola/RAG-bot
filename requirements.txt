@@ -39,6 +39,7 @@ langchain-pinecone==0.2.13
 langchain-protocol==0.0.18
 langchain-text-splitters==1.1.2
 langsmith==0.10.17
+loguru==0.7.3
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
