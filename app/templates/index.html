@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 760px;
+            margin: 40px auto;
+            padding: 0 16px;
+            background: #0f1115;
+            color: #e6e6e6;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+        }
+        #chat {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+            min-height: 200px;
+        }
+        .message {
+            padding: 12px 16px;
+            border-radius: 10px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-width: 85%;
+        }
+        .user {
+            background: #d64545;
+            align-self: flex-end;
+        }
+        .bot {
+            background: #1c1f26;
+            border: 1px solid #2a2d35;
+            align-self: flex-start;
+        }
+        .bot.loading {
+            color: #9aa0aa;
+            font-style: italic;
+        }
+        .sources {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #2a2d35;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+        .sources ul {
+            margin: 6px 0 0 0;
+            padding-left: 18px;
+        }
+        form {
+            display: flex;
+            gap: 8px;
+            position: sticky;
+            bottom: 0;
+            background: #0f1115;
+            padding-top: 8px;
+        }
+        input[type=text] {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #2a2d35;
+            background: #1c1f26;
+            color: #e6e6e6;
+            font-size: 1rem;
+        }
+        input[type=text]:focus {
+            outline: none;
+            border-color: #d64545;
+        }
+        button {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            background: #d64545;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+
+    <div id="chat"></div>
+
+    <form id="chat-form">
+        <input
+            type="text"
+            id="question"
+            placeholder="Ask a question about the documentation..."
+            autocomplete="off"
+            required
+        >
+        <button type="submit" id="send-btn">Send</button>
+    </form>
+
+    <script>
+        const chat = document.getElementById("chat");
+        const form = document.getElementById("chat-form");
+        const input = document.getElementById("question");
+        const sendBtn = document.getElementById("send-btn");
+
+        function addMessage(text, className) {
+            const div = document.createElement("div");
+            div.className = `message ${className}`;
+            div.textContent = text;
+            chat.appendChild(div);
+            div.scrollIntoView({ behavior: "smooth", block: "end" });
+            return div;
+        }
+
+        function addBotAnswer(answer, sources) {
+            const div = document.createElement("div");
+            div.className = "message bot";
+
+            const answerText = document.createElement("div");
+            answerText.textContent = answer;
+            div.appendChild(answerText);
+
+            if (sources && sources.length) {
+                const sourcesDiv = document.createElement("div");
+                sourcesDiv.className = "sources";
+                sourcesDiv.innerHTML = "<strong>Sources:</strong>";
+
+                const ul = document.createElement("ul");
+                sources.forEach((source) => {
+                    const li = document.createElement("li");
+                    li.textContent = source;
+                    ul.appendChild(li);
+                });
+                sourcesDiv.appendChild(ul);
+                div.appendChild(sourcesDiv);
+            }
+
+            chat.appendChild(div);
+            div.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const question = input.value.trim();
+            if (!question) return;
+
+            addMessage(question, "user");
+            input.value = "";
+            sendBtn.disabled = true;
+            const loadingMessage = addMessage("Thinking...", "bot loading");
+
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question }),
+                });
+
+                loadingMessage.remove();
+
+                if (!response.ok) {
+                    addMessage("An error occurred. Please try again.", "bot");
+                    return;
+                }
+
+                const data = await response.json();
+                addBotAnswer(data.answer, data.sources);
+            } catch (error) {
+                loadingMessage.remove();
+                addMessage("Failed to connect to the server.", "bot");
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        });
+    </script>
+</body>
+</html>
