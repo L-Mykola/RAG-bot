@@ -3,6 +3,7 @@ import os
 import re
 import time
 import hashlib
+from pathlib import Path
 from dotenv import load_dotenv
 
 from pinecone import Pinecone, ServerlessSpec
@@ -40,7 +41,8 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-large", api_key=os.environ
 
 vector_store = PineconeVectorStore(index=index, embedding=embeddings)
 
-DOCUMENTS_DIR = "documents/"
+# app/ingestion.py lives in app/, but documents/ stays at the project root
+DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "documents"
 
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=500,

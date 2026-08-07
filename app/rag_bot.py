@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from typing import List
 
@@ -36,10 +37,13 @@ Context:
 
 
 def format_source(metadata: dict) -> str:
+    source = metadata.get("source")
     section = metadata.get("section") or "Document"
     subsection = metadata.get("subsection")
     page = metadata.get("page")
-    label = f'Section "{section}"'
+
+    label = f'File "{Path(source).name}"' if source else "File \"unknown\""
+    label += f', Section "{section}"'
     if subsection:
         label += f', Subsection "{subsection}"'
     if page:
