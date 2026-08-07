@@ -18,6 +18,29 @@
             font-size: 1.4rem;
             margin-bottom: 20px;
         }
+        .upload-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #2a2d35;
+        }
+        .upload-bar button {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        #upload-status {
+            font-size: 0.85rem;
+            color: #9aa0aa;
+        }
+        #upload-status.success {
+            color: #4caf80;
+        }
+        #upload-status.error {
+            color: #e05a5a;
+        }
         #chat {
             display: flex;
             flex-direction: column;
@@ -95,6 +118,12 @@
 <body>
     <h1>{{ title }}</h1>
 
+    <div class="upload-bar">
+        <button type="button" id="upload-btn">Upload additional files</button>
+        <input type="file" id="file-input" accept=".pdf,.md,.txt" hidden>
+        <span id="upload-status"></span>
+    </div>
+
     <div id="chat"></div>
 
     <form id="chat-form">
@@ -113,6 +142,46 @@
         const form = document.getElementById("chat-form");
         const input = document.getElementById("question");
         const sendBtn = document.getElementById("send-btn");
+
+        const uploadBtn = document.getElementById("upload-btn");
+        const fileInput = document.getElementById("file-input");
+        const uploadStatus = document.getElementById("upload-status");
+
+        uploadBtn.addEventListener("click", () => fileInput.click());
+
+        fileInput.addEventListener("change", async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            uploadBtn.disabled = true;
+            uploadStatus.className = "";
+            uploadStatus.textContent = `Uploading "${file.name}"...`;
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    uploadStatus.className = "error";
+                    uploadStatus.textContent = data.detail || "Error uploading file.";
+                } else {
+                    uploadStatus.className = "success";
+                    uploadStatus.textContent = `"${data.filename}" added (${data.chunks_added} chunks).`;
+                }
+            } catch (error) {
+                uploadStatus.className = "error";
+                uploadStatus.textContent = "Failed to connect to the server.";
+            } finally {
+                uploadBtn.disabled = false;
+                fileInput.value = "";
+            }
+        });
 
         function addMessage(text, className) {
             const div = document.createElement("div");
